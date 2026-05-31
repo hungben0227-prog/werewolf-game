@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>狼人殺發牌系統</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div id="page-0" class="page active">
+            <h2>狼人殺發牌系統</h2>
+            <button onclick="goToPage(1)">我是房主 (創建房間)</button>
+            <button onclick="goToPage(2)">我是玩家 (加入房間)</button>
+        </div>
+
+        <div id="page-1" class="page">
+            <h2>創建房間 (房主)</h2>
+            <input type="text" id="host-name" placeholder="輸入您的名稱">
+            <input type="password" id="host-password" placeholder="設置房間密碼">
+            <button onclick="createRoom()">創建並生成房號</button>
+            <button onclick="goToPage(0)">返回</button>
+        </div>
+
+        <div id="page-2" class="page">
+            <h2>加入遊戲 (玩家)</h2>
+            <input type="text" id="player-room" placeholder="輸入4位數房號">
+            <input type="password" id="player-password" placeholder="輸入房間密碼">
+            <input type="text" id="player-name" placeholder="輸入您的名稱">
+            <button onclick="joinRoom()">加入房間</button>
+            <button onclick="goToPage(0)">返回</button>
+        </div>
+
+        <div id="page-3" class="page">
+            <h2>遊戲大廳 <span id="lobby-room-code" style="color: #ff9800;"></span></h2>
+            
+            <div class="lobby-container">
+                <div class="player-list-section">
+                    <h3>連線玩家列表</h3>
+                    <ul id="lobby-player-list"></ul>
+                </div>
+
+                <div id="host-setup" class="host-only" style="display: none;">
+                    <h3>設定身分牌 (目前數值皆預設為 0)</h3>
+                    <div class="role-settings">
+                        <h4>【狼人陣營】</h4>
+                        <label>普通狼人: <input type="number" class="role-input" data-role="普通狼人" value="0" min="0"></label>
+                        <label>狼王: <input type="number" class="role-input" data-role="狼王" value="0" min="0"></label>
+                        <label>白狼王: <input type="number" class="role-input" data-role="白狼王" value="0" min="0"></label>
+                        <label>狼美人: <input type="number" class="role-input" data-role="狼美人" value="0" min="0"></label>
+                        <label>惡靈騎士: <input type="number" class="role-input" data-role="惡靈騎士" value="0" min="0"></label>
+                        <label>血月使徒: <input type="number" class="role-input" data-role="血月使徒" value="0" min="0"></label>
+                        <label>石像鬼: <input type="number" class="role-input" data-role="石像鬼" value="0" min="0"></label>
+                        <label>機械狼: <input type="number" class="role-input" data-role="機械狼" value="0" min="0"></label>
+                        <label>大灰狼: <input type="number" class="role-input" data-role="大灰狼" value="0" min="0"></label>
+                        <label>夜行者: <input type="number" class="role-input" data-role="夜行者" value="0" min="0"></label>
+                        
+                        <h4>【神職陣營】</h4>
+                        <label>預言家: <input type="number" class="role-input" data-role="預言家" value="0" min="0"></label>
+                        <label>女巫: <input type="number" class="role-input" data-role="女巫" value="0" min="0"></label>
+                        <label>獵人: <input type="number" class="role-input" data-role="獵人" value="0" min="0"></label>
+                        <label>白痴: <input type="number" class="role-input" data-role="白痴" value="0" min="0"></label>
+                        <label>守衛: <input type="number" class="role-input" data-role="守衛" value="0" min="0"></label>
+                        <label>騎士: <input type="number" class="role-input" data-role="騎士" value="0" min="0"></label>
+                        <label>攝夢人: <input type="number" class="role-input" data-role="攝夢人" value="0" min="0"></label>
+                        <label>魔術師: <input type="number" class="role-input" data-role="魔術師" value="0" min="0"></label>
+                        <label>烏鴉: <input type="number" class="role-input" data-role="烏鴉" value="0" min="0"></label>
+                        <label>獵魔人: <input type="number" class="role-input" data-role="獵魔人" value="0" min="0"></label>
+                        <label>奇蹟商人: <input type="number" class="role-input" data-role="奇蹟商人" value="0" min="0"></label>
+                        <label>純白之女: <input type="number" class="role-input" data-role="純白之女" value="0" min="0"></label>
+                        <label>定序王子: <input type="number" class="role-input" data-role="定序王子" value="0" min="0"></label>
+
+                        <h4>【村民與其他】</h4>
+                        <label>普通村民: <input type="number" class="role-input" data-role="村民" value="0" min="0"></label>
+                        <label>丘比特: <input type="number" class="role-input" data-role="丘比特" value="0" min="0"></label>
+                        <label>盜賊: <input type="number" class="role-input" data-role="盜賊" value="0" min="0"></label>
+                        <label>野孩子: <input type="number" class="role-input" data-role="野孩子" value="0" min="0"></label>
+                    </div>
+                    <button class="start-btn" onclick="requestStartGame()">開始遊戲 (隨機發牌)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-4" class="page">
+            <h2>遊戲進行中 (房主上帝視角)</h2>
+            <div class="view-box">
+                <h3>完整玩家身分名單：</h3>
+                <table id="host-game-table">
+                    <thead>
+                        <tr>
+                            <th>編號</th>
+                            <th>名字</th>
+                            <th>身分牌</th>
+                        </tr>
+                    </thead>
+                    <tbody id="host-game-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="page-5" class="page">
+            <h2>遊戲進行中 (玩家視角)</h2>
+            <div class="my-role-box">
+                <h3>您的專屬身分：</h3>
+                <h1 id="player-own-role" style="color: #ff5722;">等待發牌...</h1>
+            </div>
+            <div class="view-box">
+                <h3>存活玩家列表：</h3>
+                <table id="player-game-table">
+                    <thead>
+                        <tr>
+                            <th>編號</th>
+                            <th>玩家名稱</th>
+                        </tr>
+                    </thead>
+                    <tbody id="player-game-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let myId = "";
+        let currentRoomCode = "";
+        let isHost = false;
+
+        socket.on('connect', () => { myId = socket.id; });
+
+        function goToPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+        }
+
+        // 房主創房
+        function createRoom() {
+            const name = document.getElementById('host-name').value.trim();
+            const password = document.getElementById('host-password').value;
+            if(!name || !password) return alert('請填寫名字與密碼！');
+            
+            isHost = true;
+            socket.emit('createRoom', { name, password });
+        }
+
+        // 玩家加入
+        function joinRoom() {
+            const roomCode = document.getElementById('player-room').value.trim();
+            const password = document.getElementById('player-password').value;
+            const name = document.getElementById('player-name').value.trim();
+            if(!roomCode || !password || !name) return alert('請填寫完整加入資訊！');
+
+            isHost = false;
+            socket.emit('joinRoom', { roomCode, password, name });
+        }
+
+        // 伺服器回應：房間創建成功
+        socket.on('roomCreated', ({ roomCode, players }) => {
+            currentRoomCode = roomCode;
+            document.getElementById('lobby-room-code').innerText = `房號：${roomCode}`;
+            document.getElementById('host-setup').style.display = 'block'; // 顯示房主設定區
+            updateLobbyUI(players);
+            goToPage(3);
+        });
+
+        // 伺服器回應：更新大廳名單
+        socket.on('updateRoom', ({ roomCode, players }) => {
+            currentRoomCode = roomCode;
+            document.getElementById('lobby-room-code').innerText = `房號：${roomCode}`;
+            updateLobbyUI(players);
+            goToPage(3);
+        });
+
+        function updateLobbyUI(players) {
+            const list = document.getElementById('lobby-player-list');
+            list.innerHTML = "";
+            players.forEach(p => {
+                const li = document.createElement('li');
+                li.innerText = `[${p.number}] ${p.name} ${p.id === socket.id ? ' (我)' : ''}`;
+                list.appendChild(li);
+            });
+        }
+
+        // 房主按下開始遊戲
+        function requestStartGame() {
+            const inputs = document.querySelectorAll('.role-input');
+            let rolesInput = {};
+            inputs.forEach(input => {
+                const count = parseInt(input.value) || 0;
+                if (count > 0) {
+                    rolesInput[input.dataset.role] = count;
+                }
+            });
+            socket.emit('startGame', { roomCode: currentRoomCode, rolesInput });
+        }
+
+        // 接收遊戲開始與發牌結果
+        socket.on('gameStarted', ({ players }) => {
+            if (isHost) {
+                // 房主跳轉第 4 頁
+                const tbody = document.getElementById('host-game-list');
+                tbody.innerHTML = "";
+                players.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${p.number}</td><td>${p.name}</td><td><strong>${p.role}</strong></td>`;
+                    tbody.appendChild(tr);
+                });
+                goToPage(4);
+            } else {
+                // 玩家跳轉第 5 頁
+                const me = players.find(p => p.id === socket.id);
+                document.getElementById('player-own-role').innerText = me ? me.role : "未知";
+
+                const tbody = document.getElementById('player-game-list');
+                tbody.innerHTML = "";
+                players.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${p.number}</td><td>${p.name} ${p.id === socket.id ? '(我)' : ''}</td>`;
+                    tbody.appendChild(tr);
+                });
+                goToPage(5);
+            }
+        });
+
+        // 錯誤訊息提示
+        socket.on('errorMsg', (msg) => { alert(msg); });
+
+        // 房間解散
+        socket.on('roomClosed', () => {
+            alert('房主已離開或房間已關閉！');
+            location.reload();
+        });
+    </script>
+</body>
+</html>
